@@ -176,6 +176,34 @@
                 "start_args": ["--menu", "BYAR Chobby $VERSION"],
                 "engine": "105.1.1-1214-gcf8d087 bar"
             }
+        },
+        {
+            "package": {
+                "id": "test-entry-linux",
+                "display": "Test Entry",
+                "platform": "linux"
+            },
+            "no_start_script": true,
+            "no_downloads": true,
+            "logs_s3_bucket": "bar-infologs",
+            "launch": {
+                "start_args": ["--menu", "BYAR Chobby $VERSION"],
+                "engine": "105.1.1-1214-gcf8d087 bar"
+            }
+        },
+        {
+            "package": {
+                "id": "test-entry-windows",
+                "display": "Test Entry",
+                "platform": "win32"
+            },
+            "no_start_script": true,
+            "no_downloads": true,
+            "logs_s3_bucket": "bar-infologs",
+            "launch": {
+                "start_args": ["--menu", "BYAR Chobby $VERSION"],
+                "engine": "105.1.1-1214-gcf8d087 bar"
+            }
         }
     ]
 }
