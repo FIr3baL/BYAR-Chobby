@@ -472,6 +472,7 @@ function Lobby:_OnAccepted(newName)
 	if newName then
 		self.myUserName = newName
 	end
+	self.userCount = 0
 	self:_CallListeners("OnAccepted")
 end
 
@@ -558,7 +559,7 @@ function Lobby:_OnAddUser(userName, status)
 	end
 
 	local userInfo = self.users[userName]
-	self.userCount = self.userCount + 1 -- because we are only allowed to ever add users once, even if they left the lobby and we still remember their info
+	self.userCount = self.userCount + 1 -- correctly fix because lobby didnt clear user count on onAccepted
 	if not userInfo then
 		userInfo = {
 			userName = userName,
@@ -570,13 +571,13 @@ function Lobby:_OnAddUser(userName, status)
 	else
 		userInfo.isOffline = false
 	end
-	
+
 	local userNameLC = userName:lower()
 	if self.userNamesLC[userNameLC] and self.userNamesLC[userNameLC] ~= userName then
 		Spring.Log(LOG_SECTION, LOG.WARNING, "Overwriting formerly known lower-case user name " .. self.userNamesLC[userNameLC] .. " by user name " .. userName .. "(2 users with same lower case-variant exist)")
 	end
 	self.userNamesLC[userName:lower()] = userName
-	
+
 	if status then
 		for k, v in pairs(status) do
 			userInfo[k] = v
@@ -615,7 +616,7 @@ function Lobby:_OnUpdateUserStatus(userName, status)
 	if status and status.steamID then
 		self.userBySteamID[status.steamID] = userName
 	end
-	if self.users[userName] then 
+	if self.users[userName] then
 		for k, v in pairs(status) do
 			self.users[userName][k] = v
 		end
@@ -833,7 +834,7 @@ end
 
 function Lobby:_OnJoinedBattle(battleID, userName, scriptPassword)
 	if not self.battles[battleID] then
-		Spring.Log(LOG_SECTION, "warning", "_OnJoinedBattle nonexistent battle.")
+		Spring.Log(LOG_SECTION, LOG.WARNING, "_OnJoinedBattle nonexistent battle.")
 		return
 	end
 	local found = false
@@ -878,7 +879,7 @@ function Lobby:_OnLeftBattle(battleID, userName)
 	end
 
 	if not (battleID and self.battles[battleID]) then
-		Spring.Log(LOG_SECTION, "error",
+		Spring.Log(LOG_SECTION, LOG.ERROR,
 			"Lobby:_OnLeftBattle: Tried to remove user from unknown battle: " .. tostring(battleID))
 		return
 	end
@@ -920,9 +921,9 @@ function Lobby:_OnUpdateBattleInfo(battleID, battleInfo)
 	battle.spectatorCount = battleInfo.spectatorCount or battle.spectatorCount
 
 	if battleInfo.locked == true then -- Because (false or nil) == nil
-		battle.locked = true 
+		battle.locked = true
 	elseif battleInfo.locked == false then
-		battle.locked = false 
+		battle.locked = false
 	end
 
 	-- ZK specific
@@ -994,7 +995,7 @@ function Lobby:_OnUpdateUserBattleStatus(userName, status)
 
 	if changed then
 		if battleStatusDiff.isSpectator ~= nil and battleStatusDiff.isSpectator == false and battleStatus.queuePos and battleStatus.queuePos ~= 0 then
-			battleStatus.queuePos = 0 -- always change queuePos to 0, if we switch from spec to player = prevent showing queuePos e.g. in playerbattelist, if we didn´t receive the queue-update from server yet
+			battleStatus.queuePos = 0 -- always change queuePos to 0, if we switch from spec to player = prevent showing queuePos e.g. in playerbattelist, if we didnï¿½t receive the queue-update from server yet
 			battleStatusDiff.queuePos = 0
 		end
 
@@ -1516,8 +1517,8 @@ end
 function Lobby:TryGetUser(userName)
 	local userInfo = self:GetUser(userName)
 	if type(userName) ~= "string" then
-		Spring.Log(LOG_SECTION, "error", "TryGetUser called with type: " .. tostring(type(userName)))
-		Spring.Log(LOG_SECTION, "error", debug.traceback())
+		Spring.Log(LOG_SECTION, LOG.ERROR, "TryGetUser called with type: " .. tostring(type(userName)))
+		Spring.Log(LOG_SECTION, LOG.ERROR, debug.traceback())
 		return {}
 	end
 	if not userInfo then
