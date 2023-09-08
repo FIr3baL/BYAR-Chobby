@@ -1662,6 +1662,12 @@ local function SortPlayersByQueued(a, b)
 	return string.lower(a.name) < string.lower(b.name)
 end
 
+local function SortTeams(a, b)
+	local teamA = tonumber(a.name)
+	local teamB = tonumber(b.name)
+	return teamA < teamB
+end
+
 local function SetupPlayerPanel(playerParent, spectatorParent, battle, battleID)
 
 	local SPACING = 24
@@ -1714,6 +1720,7 @@ local function SetupPlayerPanel(playerParent, spectatorParent, battle, battleID)
 
 	local function PositionChildren(panel, minHeight)
 		local children = panel.children
+		table.sort(children, SortTeams)
 
 		minHeight = minHeight - 10
 

@@ -47,6 +47,56 @@ local tooltipOverride = nil
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
+-- Helpers (copy from savetable.lua)
+
+local keyTypes = {
+	['string']	= true,
+	['number']	= true,
+	['boolean'] = true,
+}
+
+local valueTypes = {
+	['string']	= true,
+	['number']	= true,
+	['boolean'] = true,
+	['table']	 = true,
+}
+
+local function CompareKeys(kv1, kv2)
+	local k1, v1 = kv1[1], kv1[2]
+	local k2, v2 = kv2[1], kv2[2]
+
+	local ktype1 = type(k1)
+	local ktype2 = type(k2)
+	if (ktype1 ~= ktype2) then
+		return (ktype1 > ktype2)
+	end
+
+	local vtype1 = type(v1)
+	local vtype2 = type(v2)
+	if ((vtype1 == 'table') and (vtype2 ~= 'table')) then
+		return false
+	end
+	if ((vtype1 ~= 'table') and (vtype2 == 'table')) then
+		return true
+	end
+
+	return (k1 < k2)
+end
+
+local function MakeSortedTable(t)
+	local st = {}
+	for k,v in pairs(t) do
+		if (keyTypes[type(k)] and valueTypes[type(v)]) then
+			table.insert(st, { k, v })
+		end
+	end
+	table.sort(st, CompareKeys)
+	return st
+end
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
 -- Initialization
 
 local function InitWindow()
@@ -508,7 +558,6 @@ local function GetBattleTooltip(battleID, battle)
 				y      = 200,
 				right  = 5,
 				bottom = 5,
-				parent = tipWindow,
 				margin = {0,0,0,0},
 				objectOverrideFont = WG.Chobby.Configuration:GetFont(14, "tooltip_debug", 
 						{
@@ -528,23 +577,27 @@ local function GetBattleTooltip(battleID, battle)
 			battleTooltip.mainControl:AddChild(battleTooltip.debugText)
 		end
 
-		local text = "battleID = " .. battleID
-		for key, value in pairs(battle) do
-			text = text .. "\n" .. key .. " = " .. tostring(value)
+		local text = ""
+		local n = ""
+		local st = MakeSortedTable(battle)
+		for _, kv in ipairs(st) do
+			text = text .. n .. kv[1] .. " = " .. tostring(kv[2])
+			n = "\n"
 		end
 
 		battleTooltip.debugText:SetText(text)
 		battleTooltip.debugText:UpdateLayout()
-		local _, _, numLines = battleTooltip.debugText.font:GetTextHeight(text)
-		local height = numLines * 14 + 8 + 7
 
+		local numLines = #battleTooltip.debugText.physicalLines
+		local height = numLines * 14
 		offset = offset + height
 	elseif battleTooltip.debugText and battleTooltip.debugText.parent then
 		battleTooltip.mainControl:RemoveChild(battleTooltip.debugText)
 	end
 
 	-- Set tooltip sizes
-	battleTooltip.mainControl:SetPos(nil, nil, width, offset)
+	battleTooltip.mainControl:SetPos(nil, nil, nil, offset)
+	
 
 	if battleTooltip.userList then
 		battleTooltip.userList:SetPos(0, userListPosition)
@@ -848,19 +901,25 @@ local function GetUserTooltip(userName, userInfo, userBattleInfo, inBattleroom)
 			userTooltip.mainControl:AddChild(userTooltip.debugText)
 		end
 
-		local text = userName
-		for key, value in pairs(userInfo) do
-			text = text .. "\n" .. key .. " = " .. tostring(value)
+
+		local st = MakeSortedTable(userInfo)
+		local n = ""
+		local text = ""
+		for _, kv in ipairs(st) do
+			text = text .. n .. kv[1] .. " = " .. tostring(kv[2])
+			n = "\n"
 		end
-		for key, value in pairs(userBattleInfo) do
-			text = text .. "\n" .. key .. " = " .. tostring(value)
+		text = text .. "\n" .. "---"
+		st = MakeSortedTable(userBattleInfo)
+		for _, kv in ipairs(st) do
+			text = text .. "\n" .. kv[1] .. " = " .. tostring(kv[2])
 		end
 
 		userTooltip.debugText:SetText(text)
 		userTooltip.debugText:UpdateLayout()
-		local _, _, numLines = userTooltip.debugText.font:GetTextHeight(text)
-		local height = numLines * 14 + 8 + 7
 
+		local numLines = #userTooltip.debugText.physicalLines
+		local height = numLines * 14
 		offset = offset + height
 	elseif userTooltip.debugText and userTooltip.debugText.parent then
 		userTooltip.mainControl:RemoveChild(userTooltip.debugText)

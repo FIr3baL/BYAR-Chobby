@@ -489,15 +489,6 @@ end
 
 function InterfaceSkirmish:AddAi(aiName, aiLib, allyNumber, version, aiOptions, battleStatusOptions)
 	self:super("AddAi", aiName, aiLib, allyNumber, version, aiOptions, battleStatusOptions)
-	self:_OnAddAi(self:GetMyBattleID(), aiName, {
-		aiLib = aiLib,
-		allyNumber = allyNumber,
-		owner = self:GetMyUserName(),
-		aiVersion = version,
-		aiOptions = aiOptions,
-		teamColor = battleStatusOptions and battleStatusOptions.teamColor,
-		side = battleStatusOptions and battleStatusOptions.side,
-	})
 end
 
 function InterfaceSkirmish:SayBattle(message)
