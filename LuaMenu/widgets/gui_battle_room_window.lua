@@ -1663,8 +1663,9 @@ local function SortPlayersByQueued(a, b)
 end
 
 local function SortTeams(a, b)
-	local teamA = tonumber(a.name)
-	local teamB = tonumber(b.name)
+	-- use abs to sort queue(=-1) above specs(=-2)
+	local teamA = math.abs(tonumber(a.name))
+	local teamB = math.abs(tonumber(b.name))
 	return teamA < teamB
 end
 
