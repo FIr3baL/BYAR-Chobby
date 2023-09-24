@@ -1311,7 +1311,7 @@ end
 function Lobby:ParseJsonRPC(json)
 	Spring.Echo("Json:\n" .. json)
 	local rpc = spJsonDecode(json)
-	local status = BStatus and BStatus.result and BStatus.result.game and BStatus.result.game.status
+	local status = rpc and rpc.result and rpc.result.game and rpc.result.game.status
 	
 	if status and status.gameTime then
 		Spring.Echo(string.format("Game status=%s  gameSTatus=%s  gameTime=%s", status["Game status"] or "", status.gameStatus or "", status.gameTime or ""))

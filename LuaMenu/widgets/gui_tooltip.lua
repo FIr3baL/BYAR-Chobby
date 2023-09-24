@@ -12,6 +12,7 @@ end
 
 local spGetMouseState           = Spring.GetMouseState
 local screenWidth, screenHeight = Spring.GetWindowGeometry()
+local spFormatTime              = Spring.Utilities.FormatTime
 
 local MAX_WIDTH = 640
 local MAX_WINDOW_WIDTH = MAX_WIDTH + 11
