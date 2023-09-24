@@ -5,6 +5,8 @@
 VFS.Include(LIB_LOBBY_DIRNAME .. "observable.lua")
 VFS.Include(LIB_LOBBY_DIRNAME .. "utilities.lua")
 
+local spJsonDecode = Spring.Utilities.json.decode
+
 function Lobby:init()
 	self.listeners = {}
 	-- don't use these fields directly, they are subject to change
@@ -789,6 +791,9 @@ end
 
 function Lobby:_OnBattleIngameUpdate(battleID, isRunning)
 	if self.battles[battleID] and self.battles[battleID].isRunning ~= isRunning then
+		self.battles[battleID].inStatusSince = os.clock() -- relative time in seconds to game start
+		Spring.Echo("_OnBattleIngameUpdate set inGameStatusSince for title", self.battles[battleID].title, self.battles[battleID].inStatusSince)
+
 		self.battles[battleID].isRunning = isRunning
 		self:_CallListeners("OnBattleIngameUpdate", battleID, isRunning)
 	end
@@ -822,13 +827,18 @@ function Lobby:_OnBattleOpened(battleID, battle)
 		isRunning = battle.isRunning,
 
 		-- ZK specific
-		runningSince = battle.runningSince,
-		battleMode = battle.battleMode,
-		disallowCustomTeams = battle.disallowCustomTeams,
-		disallowBots = battle.disallowBots,
-		isMatchMaker = battle.isMatchMaker,
+		-- runningSince = battle.runningSince,
+		-- battleMode = battle.battleMode,
+		-- disallowCustomTeams = battle.disallowCustomTeams,
+		-- disallowBots = battle.disallowBots,
+		-- isMatchMaker = battle.isMatchMaker,
 	}
 	self.battleCount = self.battleCount + 1
+
+	local founderInGame = self.battles[battleID].founder and self.users[self.battles[battleID].founder] and self.users[self.battles[battleID].founder].isInGame
+	if founderInGame then
+		Spring.Echo(string.format("New Battle with founder inGame. battleID:%s  founder:%s  title:%s  inGame:%s", tostring(battleID), self.battles[battleID].founder, self.battles[battleID].title, tostring(self.users[self.battles[battleID].founder].isInGame)))
+	end
 
 	self:_CallListeners("OnBattleOpened", battleID, self.battles[battleID])
 end
@@ -976,20 +986,30 @@ function Lobby:_OnUpdateBattleInfo(battleID, battleInfo)
 	battle.balanceMode = battleInfo.balanceMode or battle.balanceMode
 	battle.preset = battleInfo.preset or battle.preset
 
+	battle.inStatusSince = battleInfo.inStatusSince or battle.inStatusSince
+	-- Spring.Echo("_OnUpdateBattleInfo update for ", battleID, ":", battle.title, " has inGameStatusSince set?", battle.inGameStatusSince ~= nil)
+
 	-- ZK specific
-	battle.runningSince = battleInfo.runningSince or battle.runningSince
-	battle.battleMode = battleInfo.battleMode or battle.battleMode
-	if battleInfo.disallowCustomTeams ~= nil then
-		battle.disallowCustomTeams = battleInfo.disallowCustomTeams
-	end
-	if battleInfo.disallowBots ~= nil then
-		battle.disallowBots = battleInfo.disallowBots
-	end
-	if battleInfo.isMatchMaker ~= nil then
-		battle.isMatchMaker = battleInfo.isMatchMaker
-	end
+	-- battle.runningSince = battleInfo.runningSince or battle.runningSince
+	-- battle.battleMode = battleInfo.battleMode or battle.battleMode
+	-- if battleInfo.disallowCustomTeams ~= nil then
+	-- 	battle.disallowCustomTeams = battleInfo.disallowCustomTeams
+	-- end
+	-- if battleInfo.disallowBots ~= nil then
+	-- 	battle.disallowBots = battleInfo.disallowBots
+	-- end
+	-- if battleInfo.isMatchMaker ~= nil then
+	-- 	battle.isMatchMaker = battleInfo.isMatchMaker
+	-- end
 
 	self:_CallListeners("OnUpdateBattleInfo", battleID, battleInfo)
+end
+
+-- id must be 1, otherwise some properties return wrong values (ToDo: report bug)
+local JSONRPCBATTLE = '!#JSONRPC {"jsonrpc": "2.0", "method": "status", "params": ["game"], "id": 1}'
+function Lobby:GetSpadsBattleStatus(founder)
+	Spring.Echo("GetSpadsBattleStatus for founder", founder)
+	self:SayPrivate(founder, JSONRPCBATTLE)
 end
 
 function Lobby:_OnUpdateBattleTitle(battleID, battleTitle)
@@ -1287,7 +1307,47 @@ function Lobby:_OnSaidEx(chanName, userName, message, sayTime)
 	self:_CallListeners("OnSaidEx", chanName, userName, message, sayTime)
 end
 
+-- use only gameTime for now
+function Lobby:ParseJsonRPC(json)
+	Spring.Echo("Json:\n" .. json)
+	local rpc = spJsonDecode(json)
+	local status = BStatus and BStatus.result and BStatus.result.game and BStatus.result.game.status
+	
+	if status and status.gameTime then
+		Spring.Echo(string.format("Game status=%s  gameSTatus=%s  gameTime=%s", status["Game status"] or "", status.gameStatus or "", status.gameTime or ""))
+		Spring.Echo("now: ", os.clock())
+		local now = os.clock()
+		Spring.Echo("nowOS: ", now)
+		local past = math.floor(now - status.gameTime)
+		Spring.Echo("past(save): ", now)
+		return past
+	elseif status then
+		Spring.Echo("not status.gameTime, maybe pregame or just ended in the milisecond between")
+	end
+	return false
+end
+
+
+local MSG_PREFIX_JSONRPC = "!#JSONRPC "
 function Lobby:_OnSaidPrivate(userName, message, sayTime)
+	local found, json = startsWith(message, MSG_PREFIX_JSONRPC)
+	if found then
+		local battleID = false
+		for ID, battle in pairs(self.battles) do
+			if battle.founder == userName then
+				battleID = ID
+				break
+			end
+		end
+
+		if battleID then
+			local startTime = self:ParseJsonRPC(json)
+			if startTime then
+				self.battles[battleID].inStatusSince = startTime
+			end
+			return self
+		end
+	end
 	self:_CallListeners("OnSaidPrivate", userName, message, sayTime)
 end
 

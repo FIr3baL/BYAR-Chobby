@@ -325,6 +325,35 @@ local function GetBattleTooltip(battleID, battle, showMapName)
 	elseif battleTooltip.isRunning then 
 		battleTooltip.isRunning.Hide()
 	end
+
+	-- inStatusSince
+	local askOneTime = false -- todo...
+	if battle.isRunning then
+		Spring.Echo("inStatusSince: ", tostring(battle.inStatusSince))
+		if not battleTooltip.inStatusSince then
+			battleTooltip.inStatusSince = GetTooltipLine(battleTooltip.mainControl)
+		end
+
+		local message = "not initialized"
+		if not battle.inStatusSince then
+			if not askOneTime then
+				Spring.Echo("asking spads for running time...")
+				lobby:GetSpadsBattleStatus(battle.founder)
+				message = "Fetching running time..."
+				askOneTime = true
+			end
+		else
+			local elapsed = os.clock() - math.floor(battle.inStatusSince)
+			message = string.format("Running for %s", spFormatTime(elapsed, true))
+		end
+		
+		battleTooltip.inStatusSince.Update( offset, message)
+		Spring.Echo("inStatusSince = " .. message)
+		offset = offset + 21
+		
+	elseif battleTooltip.inStatusSince then
+		battleTooltip.inStatusSince:Hide()
+	end
   
 	-- -- InGameSince (ZK specific)
 	-- if battle.runningSince and battle.isRunning then
