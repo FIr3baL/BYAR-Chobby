@@ -375,6 +375,28 @@ function Configuration:init()
 		preset = true,
 		boss = true,
 	}
+
+	self.bmVoteParams = {
+		source = true,
+		user = true,
+		expireTime = true,
+		awayVoteTime = true,
+		yesCount = true,
+		noCount = true,
+		blankCount = true,
+		command = true,
+		manualVoters = true,
+		remainingVoters = true,
+		awayVoters = true,
+	}
+	self.bmVoteResult = "voteResult"
+	
+	self.VOTE_PENDING  = "Pending"
+	self.VOTE_SUCCESS  = "Success"
+	self.VOTE_CANCELED = "Canceled"
+	self.VOTE_EXPIRED  = "Expired"
+	self.VOTE_UNKNOWN  = "Unknown"
+
 	-- SAIDBATTLEEX Prefixes
 	self.BTLEX_JOINQUEUE = "You are now in the join-queue at position"
 	self.BTLEX_BARMANAGER = "* BarManager|"

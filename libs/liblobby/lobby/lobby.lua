@@ -74,6 +74,9 @@ function Lobby:_Clean()
 
 	-- reconnection delay in seconds
 	self.reconnectionDelay = 15
+
+	self.votes = {}
+	self.currentVote = nil
 end
 
 function Lobby:_PreserveData()
@@ -560,6 +563,9 @@ end
 ------------------------
 
 function Lobby:_OnAddUser(userName, status)
+	if userName == "robertthepie" then
+		Spring.Echo("_OnAddUser", userName)
+	end
 	if status and status.steamID then
 		self.userBySteamID[status.steamID] = userName
 	end
@@ -592,6 +598,11 @@ function Lobby:_OnAddUser(userName, status)
 end
 
 function Lobby:_OnRemoveUser(userName)
+	if userName == "robertthepie" then
+		Spring.Echo("_OnRemoveUser", userName)
+		Spring.TraceFullEcho()
+	end
+
 	if not self.users[userName] then
 		Spring.Log("liblobby", LOG.ERROR, "Tried to remove missing user", userName)
 		return
@@ -841,6 +852,8 @@ function Lobby:_OnBattleOpened(battleID, battle)
 		playerCount = battle.playerCount,
 		spectatorCount = battle.spectatorCount,
 		isRunning = battle.isRunning,
+
+		votes = {},
 
 		-- ZK specific
 		-- runningSince = battle.runningSince,
@@ -1147,43 +1160,11 @@ function Lobby:_OnSaidBattle(userName, message, sayTime)
 	self:_CallListeners("OnSaidBattle", userName, message, sayTime)
 end
 
--- message = {"BattleStateChanged": {"locked": "locked", "autoBalance": "advanced", "teamSize": "8", "nbTeams": "2", "balanceMode": "clan;skill", "preset": "team", "boss": "Fireball"}}
-function Lobby:ParseBarManager(battleID, message)
-	local battleInfo = {}
-	local barManagerSettings = spJsonDecode(message)
-	if not barManagerSettings['BattleStateChanged'] then
-		return battleInfo
-	end
-	
-	for k, v in pairs(barManagerSettings['BattleStateChanged']) do
-		if k == "boss" and v == "" then
-			battleInfo[k] = false
-		elseif WG.Chobby.Configuration.barMngSettings[k] then
-			battleInfo[k] = v
-		end
-	end
-	return battleInfo
-end
-
 function Lobby:_OnSaidBattleEx(userName, message, sayTime)
-	
-	local found, bmMessage = startsWith(message, WG.Chobby.Configuration.BTLEX_BARMANAGER)
-	if found then
-		local battleID = self.users[userName] and self.users[userName].battleID
-		if not battleID then
-			Spring.Log(LOG_SECTION, LOG_WARNING, "couldn't match barmanager message to any known battle", tostring(founder))
-			return
-		end
-		local battleInfo = self:ParseBarManager(battleID, bmMessage)
-		if next(battleInfo) then
-			self:super("_OnUpdateBattleInfo", battleID, battleInfo)
-			-- 2023-07-04 FB: For now: proceed with CallListeners of SaidBattleEx, because gui_battle_room has its own parsing of barmanager message
-			-- return
-		end
-	end
 	self:_CallListeners("OnSaidBattleEx", userName, message, sayTime)
 end
 
+--[[
 function Lobby:_OnVoteUpdate(voteMessage, pollType, notify, mapPoll, candidates, votesNeeded, pollUrl)
 	self:_CallListeners("OnVoteUpdate", voteMessage, pollType, notify, mapPoll, candidates, votesNeeded, pollUrl)
 end
@@ -1196,9 +1177,55 @@ function Lobby:_OnVoteResponse(isYesVote)
 	self:_CallListeners("OnVoteResponse", isYesVote)
 end
 
+]]--
 function Lobby:_OnUserVoted(userName, voteOption)
 	self:_CallListeners("OnUserVoted", userName, voteOption)
 end
+
+-- Pre Vote
+function Lobby:_OnPreStartVote(battleID, newState)
+	Spring.Echo("Lobby:_OnPreStartVote", battleID, #self.listeners["OnPreStartVote"])
+	self:_CallListeners("_OnPreStartVote", battleID, newState)
+end
+
+function Lobby:_OnPreUpdateVote(battleID, newState)
+	Spring.Echo("Lobby:_OnPreUpdateVote state exists", newState and "yes", "source:", newState["source"], #self.listeners["OnPreUpdateVote"])
+	self:_CallListeners("OnPreUpdateVote", battleID, newState)
+end
+
+function Lobby:_OnPreEndVote(battleID, newState)
+	self:_CallListeners("OnPreEndVote", battleID, newState)
+end
+
+
+-- Vote
+function Lobby:_OnAddVote(battleID, vote)
+	if not self.battles[battleID] then
+		Spring.Echo("_OnAddVote no battle with battleID", battleID)
+	elseif not self.battles[battleID].votes then
+		Spring.Echo("_OnAddVote battle with battleID", battleID, " has no votes table")
+	end
+	self.battles[battleID].votes[vote.id] = vote
+
+	Spring.Utilities.TableEcho(self.battles[battleID].votes, "votes of " .. self.battles[battleID].title)
+	self:_CallListeners("OnAddVote", battleID, vote)
+end
+
+function Lobby:_OnUpdateVote(battleID, voteID, voteDiff)
+	if not self.battles[battleID].votes[voteID] then
+		Spring.Echo("_OnUpdateVote: voteID not found", voteID, " in battleID", battleID, " title:", self.battles[battleID].title)
+		return self
+	end
+	Spring.Utilities.TableEcho(voteDiff, "_OnUpdateVote voteDiff")
+	self:_CallListeners("OnVoteUpdate", battleID, voteDiff)
+end
+
+function Lobby:_OnEndVote(battleID, voteID)
+	self:_CallListeners("OnEndVote", battleID, voteID)
+end
+
+
+
 
 function Lobby:_OnSetModOptions(data)
 	self.modoptions = data

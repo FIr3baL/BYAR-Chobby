@@ -608,6 +608,10 @@ Interface.commands["QUEUED"] = Interface._OnQueued
 ------------------------
 
 function Interface:_OnAddUser(userName, country, accountID, lobbyID)
+	if userName == "robertthepie" or 1 ==1 then
+	 Spring.Echo("_OnAddUser",userName,  country)
+
+	end
 	local userTable = {
 		-- constant
 		accountID = tonumber(accountID),
@@ -1027,10 +1031,99 @@ end
 Interface.commands["SAIDBATTLE"] = Interface._OnSaidBattle
 Interface.commandPattern["SAIDBATTLE"] = "(%S+)%s+(.*)"
 
+local function ValidateVoteParams(state)
+	local Configuration = WG.Chobby.Configuration
+	local vote = {}
+	for k, v in pairs(state) do
+		if Configuration.bmVoteParams[k] then
+			vote[k] = v
+		end
+	end
+	Spring.Utilities.TableEcho(vote, "validVote")
+	return vote
+end
+
+local function ParseBmVoteStart(battleID, state)
+	local battleInfo = {}
+	local vote = ValidateVoteParams(state)
+
+	return battleInfo
+end
+local function ParseBmVoteUpdate(battleID, state)
+	local battleInfo = {}
+	local vote = ValidateVoteParams(state)
+	return battleInfo
+end
+local function ParseBmVoteStop(battleID, state)
+	local battleInfo = {}
+	local vote = ValidateVoteParams(state)
+	return battleInfo
+end
+
+local function ParseBmBattleStateChanged(battleID, state)
+	local Configuration = WG.Chobby.Configuration
+	local battleInfo = {}
+	for k, v in pairs(state) do
+		if k == "boss" and v == "" then
+			battleInfo[k] = false
+		elseif Configuration.barMngSettings[k] then
+			battleInfo[k] = v
+		end
+	end
+	return battleInfo
+end
+
+local spJsonDecode = Spring.Utilities.json.decode
+
+-- message = {"BattleStateChanged": {"locked": "locked", "autoBalance": "advanced", "teamSize": "8", "nbTeams": "2", "balanceMode": "clan;skill", "preset": "team", "boss": "Fireball"}}
+function Interface:ParseBarManager(battleID, message)
+	local battleInfo = {}
+	local bmMessage = spJsonDecode(message)
+	if not bmMessage then
+		return battleInfo
+	end
+
+	if bmMessage['BattleStateChanged'] then
+		return ParseBmBattleStateChanged(battleID, bmMessage['BattleStateChanged'])
+	elseif bmMessage['onVoteStart'] then
+		-- self:super("_OnVoteStart", bmMessage['onVoteStart'])
+		self:_OnPreStartVote(battleID, bmMessage['onVoteStart'])
+		return ParseBmVoteStart(battleID, bmMessage['onVoteStart'])
+	elseif bmMessage['currentVote'] then
+		-- self:super("_OnVoteUpdate", bmMessage['currentVote'])
+		self:_OnPreUpdateVote(battleID, bmMessage['currentVote'])
+		return ParseBmVoteUpdate(battleID, bmMessage['currentVote'])
+	elseif bmMessage['onVoteStop'] then
+		-- self:super("_OnVoteStop", bmMessage['onVoteStop'])
+		self:_OnPreEndVote(battleID, bmMessage['onVoteStop'])
+		return ParseBmVoteStop(battleID, bmMessage['onVoteStop'])
+	end
+	return battleInfo
+end
+
 function Interface:_OnSaidBattleEx(userName, message)
-	if startsWith(message, WG.Chobby.Configuration.BTLEX_JOINQUEUE) then
+	local Configuration = WG.Chobby.Configuration
+	
+	if startsWith(message, Configuration.BTLEX_JOINQUEUE) then
 		self:_SendCommand(concat("c.battle.queue_status")) -- request the whole join-queue again, because server doesn´t always send s.battle.queue_status or sends it before the change took affect
 		return
+	end
+
+	local found, bmJson = startsWith(message, WG.Chobby.Configuration.BTLEX_BARMANAGER)
+	if found then
+		local battleID = self.users[userName] and self.users[userName].battleID
+		if not battleID then
+			Spring.Log(LOG_SECTION, LOG_WARNING, "couldn't match barmanager message to any known battle", tostring(userName))
+			return
+		end
+		local battleInfo = self:ParseBarManager(battleID, bmJson)
+
+		Spring.Utilities.TableEcho(battleInfo, "newBattleInfoBM")
+		if next(battleInfo) then
+			self:super("_OnUpdateBattleInfo", battleID, battleInfo)
+			-- 2023-07-04 FB: For now: proceed with CallListeners of SaidBattleEx, because gui_battle_room has its own parsing of barmanager message
+			-- return
+		end
 	end
 	self:super("_OnSaidBattleEx", userName, message)
 end
