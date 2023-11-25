@@ -255,7 +255,7 @@ local function ProcessNumberOption(data, index)
 		width = 1600,
 		height = 32,
 		padding = {0, 0, 0, 0},
-    tooltip = data.desc,
+		tooltip = data.desc,
 		children = {
 			label,
 			numberBox
@@ -288,6 +288,7 @@ local function ProcessStringOption(data, index)
 		useIME = false,
 		objectOverrideFont = WG.Chobby.Configuration:GetFont(2),
 		objectOverrideHintFont = WG.Chobby.Configuration:GetHintFont(2),
+		tooltip = data.desc,
 		OnFocusUpdate = {
 			function (obj)
 				if obj.focused then
@@ -302,7 +303,7 @@ local function ProcessStringOption(data, index)
 	return Control:New {
 		x = 0,
 		y = index*32,
-		width = 600,
+		width = 1600,
 		height = 32,
 		padding = {0, 0, 0, 0},
 		children = {
@@ -533,11 +534,11 @@ local function InitializeModoptionsDisplay()
 		local empty = true
 		modoptions = modoptions or {}
 		for key, value in pairs(modoptions) do		
-			if modoptionDefaults[key] == nil or modoptionDefaults[key] ~= value then
+			if modoptionDefaults[key] == nil or modoptionDefaults[key] ~= value or key == "ranked_game" then
 				local option = getModOptionByKey(key)
 				local name = option.name and option.name or key
 				text = text .. "\255\120\120\120"
-				if text ~= "" then
+				if text ~= "\255\120\120\120" then
 					text = text .. "──────\n"
 				end
 				text = text .. tostring(name).. " = \255\255\255\255" .. shortenedValue(value) .. "\n"

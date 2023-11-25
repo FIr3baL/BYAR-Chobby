@@ -166,7 +166,7 @@ local function CreateReplayEntry(
 	-- Extract replay time from the filename
 	local replayDateString = string.format(
 		"%s-%s-%s %s:%s",
-		string.match(fileName, "(%d%d%d%d)(%d%d)(%d%d)_(%d%d)(%d%d)")
+		string.match(fileName, "(%d%d%d%d)-?(%d%d)-?(%d%d)_(%d%d)-?(%d%d)")
 	)
 
 	-- Compute the time of the replay
@@ -431,6 +431,27 @@ end
 --------------------------------------------------------------------------------
 -- Controls
 
+-- VFS.DirList returns demos in alphabetical order; We need to have the most recent demos on the end of our replays-table
+-- This function reads from end of replays and puts all demos from engines prior to 2113 to the beginnnig
+-- This is a hot-fix and won't sort by date. If testers did games with prior 2113 and newer in between, older demos will still be found at the very end !
+local function SortReplays(replays)
+	local oldReplays = {}
+	local done = false
+	repeat
+		if #replays == 0 or not string.match(replays[#replays], "(%d%d%d%d%d)") then
+			done = true
+		else
+			table.insert(oldReplays, replays[#replays])
+			table.remove(replays, #replays)
+		end
+	until(done)
+
+	for _, oldReplay in ipairs(oldReplays) do
+		table.insert(replays, 1, oldReplay)
+	end
+	return replays
+end
+
 local function InitializeControls(parentControl)
 	local Configuration = WG.Chobby.Configuration
 
@@ -489,8 +510,8 @@ local function InitializeControls(parentControl)
 	local PartialAddReplays, moreButton
 
 	local function AddReplays()
+		local replays = SortReplays(VFS.DirList("demos", "*.sdfz"))
 
-		local replays = VFS.DirList("demos", "*.sdfz")
 		local index = #replays
 
         --  Add one replay to the replay list

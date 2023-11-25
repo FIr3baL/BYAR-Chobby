@@ -223,21 +223,21 @@ function Configuration:init()
 	self.gameConfigName = fileConfig.game
 	self:LoadGameConfig(gameConfPath .. self.gameConfigName .. "/mainConfig.lua")
 
-	self.campaignPath = "campaign/byartest"
-	self.campaignConfigName = "byartest"
-	self.campaignConfig = VFS.Include("campaign/byartest/mainConfig.lua") -- no campaign yet for BYAR
-	self.campaignSaveFile = nil -- Set by user
-	self.nextCampaignSaveNumber = 1
-	self.campaignConfigOptions = {
-		"sample",
-		"byartest",
-		"--dev"
-	}
-	self.campaignConfigHumanNames = {
-		"Sample",
-		"BYARtest",
-		--"Dev"
-	}
+	-- self.campaignPath = "campaign/byartest"
+	-- self.campaignConfigName = "byartest"
+	-- self.campaignConfig = VFS.Include("campaign/byartest/mainConfig.lua") -- no campaign yet for BYAR
+	-- self.campaignSaveFile = nil -- Set by user
+	-- self.nextCampaignSaveNumber = 1
+	-- self.campaignConfigOptions = {
+	-- 	"sample",
+	-- 	"byartest",
+	-- 	"--dev"
+	-- }
+	-- self.campaignConfigHumanNames = {
+	-- 	"Sample",
+	-- 	"BYARtest",
+	-- 	--"Dev"
+	-- }
 	local gameConfigOptions = {}
 	local subdirs = VFS.SubDirs(gameConfPath)
 	for index, subdir in ipairs(subdirs) do
@@ -268,7 +268,6 @@ function Configuration:init()
 	self.autoLaunchAsSpectator = true
 	self.lastLoginChatLength = 25
 	self.notifyForAllChat = true
-	self.planetwarsNotifications = false -- Possibly too intrusive? See how it goes.
 	self.ingameNotifcations = true -- Party, chat
 	self.nonFriendNotifications = true -- Party, chat
 	self.friendActivityNotification = true
@@ -303,6 +302,7 @@ function Configuration:init()
 	self.drawAtFullSpeed = false
 	self.fixFlicker = true
 	self.lastFactionChoice = 0
+	self.lastStartedBattleID = 0
 	self.lastGameSpectatorState = false
 	self.lobbyIdleSleep = false
 	self.rememberQueuesOnStart = false
@@ -690,7 +690,6 @@ function Configuration:GetConfigData()
 		animate_lobby = self.animate_lobby,
 		game_settings = self.game_settings,
 		notifyForAllChat = self.notifyForAllChat,
-		planetwarsNotifications = self.planetwarsNotifications,
 		ingameNotifcations = self.ingameNotifcations,
 		nonFriendNotifications = self.nonFriendNotifications,
 		simplifiedSkirmishSetup = self.simplifiedSkirmishSetup,
@@ -711,6 +710,7 @@ function Configuration:GetConfigData()
 		drawAtFullSpeed = self.drawAtFullSpeed,
 		fixFlicker = self.fixFlicker,
 		lastFactionChoice = self.lastFactionChoice,
+		lastStartedBattleID = self.lastStartedBattleID,
 		lastGameSpectatorState = self.lastGameSpectatorState,
 		lobbyIdleSleep = self.lobbyIdleSleep,
 		rememberQueuesOnStart = self.rememberQueuesOnStart,
@@ -779,10 +779,10 @@ function Configuration:SetConfigValue(key, value)
 	if key == "gameConfigName" then
 		self:LoadGameConfig(LUA_DIRNAME .. "configs/gameConfig/" .. value .. "/mainConfig.lua")
 	end
-	if key == "campaignConfigName" then
-		self.campaignPath = "campaign/" .. value
-		self.campaignConfig = VFS.Include("campaign/" .. value .. "/mainConfig.lua")
-	end
+	-- if key == "campaignConfigName" then
+	-- 	self.campaignPath = "campaign/" .. value
+	-- 	self.campaignConfig = VFS.Include("campaign/" .. value .. "/mainConfig.lua")
+	-- end
 	self:_CallListeners("OnConfigurationChange", key, value)
 end
 

@@ -17,11 +17,6 @@ function Interface:init()
 	self.finishedConnecting = false
 	self.listeners = {}
 
-	-- Inheritance is too shallow for interface_zerok.lua to get its own init.
-	if self.InheritanceIsBrokenWorkaroundInit then
-		self:InheritanceIsBrokenWorkaroundInit()
-	end
-
 	-- timeout (in seconds) until first message is received from server before disconnect is assumed
 	self.connectionTimeout = 50
 
@@ -146,6 +141,11 @@ function Interface:ProcessBuffer()
 		self.commandBuffer = false
 		self.commandsInBuffer = 0
 		self.bufferExecutionPos = 0
+		
+		-- Sending MYBATTLESTATUS is disabled while executing buffer, so send it one time after
+		if self:GetMyBattleID() then -- are we still in a battle ?
+			self:SetBattleStatus(self.userBattleStatus[self:GetMyUserName()], true) -- force
+		end
 		return false
 	end
 	self:CommandReceived(command)
