@@ -986,8 +986,7 @@ local function getReplayPlayerListTooltip(teamList)
 	local rows = 1
 	local divisor
 	if showTeams then
-		rows = math.ceil(#teamList / 4)
-		cols = math.min(#teamList, 4)
+		cols = math.ceil(#teamList / math.ceil(#teamList / 4))
 	else
 		if #teamList < 33 then
 			divisor = 8 -- max 4 columns
@@ -1020,8 +1019,10 @@ local function getReplayPlayerListTooltip(teamList)
 
 	local xOffsetPlayer = 0
 	local yOffsetPlayer = 0
-	local yOffsetMax = 0
+	local yOffsetTeamMax = 0
 	local teamStack
+	local prevRowHeightMax = 0
+	local totalHeight = 0
 
 	for teamNr = 1, #teamList do
 
@@ -1029,9 +1030,16 @@ local function getReplayPlayerListTooltip(teamList)
 		table.sort(players, SortPlayersBySkill)
 
 		if showTeams or teamNr == 1 then
-			xOffsetTeam = (teamNr - 1) % 4 * PLAYERWIDTH
-			yOffsetTeam = math.ceil(teamNr / 4) * (23 + 4 * PLAYERHEIGHT)
+			xOffsetTeam = (teamNr - 1) % cols * PLAYERWIDTH
+			if xOffsetTeam == 0 then
+				prevRowHeightMax = yOffsetTeamMax
+				totalHeight = totalHeight + prevRowHeightMax + math.floor((teamNr - 1) / cols) * 23
+				yOffsetTeamMax = 0
+			end
+			yOffsetTeam = math.floor((teamNr - 1) / cols) * (prevRowHeightMax + 23)
+
 			teamStack = newTeamStack()
+			Spring.Echo("teamNr", teamNr, "xOffsetTeam:", xOffsetTeam, "yOffsetTeam:",yOffsetTeam, "prevRowHeightMax:",prevRowHeightMax, "totalHeight:", totalHeight)
 			
 			-- team title
 			if not teamStack.teamTitle then
@@ -1051,7 +1059,6 @@ local function getReplayPlayerListTooltip(teamList)
 			xOffsetPlayer = math.floor(teamNr / divisor)  * PLAYERWIDTH
 			yOffsetPlayer = 23 + (teamNr-1) % divisor * PLAYERHEIGHT
 		end
-		yOffsetMax = math.max(yOffsetMax, yOffsetPlayer)
 
 		for playerNr = 1, #teamList[teamNr] do
 			local playerHolder = Control:New {
@@ -1067,13 +1074,16 @@ local function getReplayPlayerListTooltip(teamList)
 			playerHolder:AddChild(playerControl)
 
 			yOffsetPlayer = yOffsetPlayer + PLAYERHEIGHT
-			yOffsetMax = math.max(yOffsetMax, yOffsetPlayer)
+			yOffsetTeamMax = math.max(yOffsetTeamMax, yOffsetPlayer)
 		end
 
 	end
 
+	totalHeight = totalHeight + yOffsetTeamMax
+
+	Spring.Echo("yOffsetTeamHeight", yOffsetTeamMax, "totalHeight:", totalHeight)
 	-- Set tooltip sizes
-	replayTooltip.mainStackPanel:SetPos(nil, nil, cols * PLAYERWIDTH, yOffsetMax + 5)
+	replayTooltip.mainStackPanel:SetPos(nil, nil, cols * PLAYERWIDTH, totalHeight + 5)
 
 	return replayTooltip.mainStackPanel
 end
